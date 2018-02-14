@@ -13,4 +13,7 @@ setup(
     install_requires=[
         'objects_query==1.0'
         ],
+    description = 'Hypergraphs and DB using hypergraphs',
+    long_description = str(open('README.md', 'r').read()),
+    license = "BSD",
 )
