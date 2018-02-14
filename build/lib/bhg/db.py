@@ -117,7 +117,7 @@ class GraphDB():
     
     def update(self, table, data):
         n_ids, d = self.graph.separate_keys(data)
-        n = list(self.graph.nodes(**n_ids))
+        n = self.graph.nodes(**n_ids)
         e = self.graph.edges(*n, type = table)
         for _e in e:
             _e.update(**d)
@@ -125,7 +125,7 @@ class GraphDB():
     
     def insert(self, table, data):
         n_ids, d = self.graph.separate_keys(data)
-        n = list(self.graph.nodes(**n_ids))
+        n = self.graph.nodes(**n_ids)
         eid = d.pop('id', None)
         return {self.graph.class_edge(self.graph, eid, type = table, nodes = n, **d)}
     

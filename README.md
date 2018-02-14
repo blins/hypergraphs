@@ -22,7 +22,7 @@ Uses:
     for ed in data:
         n_ids, p = g.separate_keys(ed)
         et = p.pop('source')
-        n = g.nodes(**n_ids)
+        n = list(g.nodes(**n_ids))
         _e = g.edges(*n, type = et)
         if not _e:
             _e = {Edge(g, type = et, nodes = n, **p)}

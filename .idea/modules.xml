@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/hypergraphs.iml" filepath="$PROJECT_DIR$/.idea/hypergraphs.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../objects_query/.idea/objects_query.iml" filepath="$PROJECT_DIR$/../objects_query/.idea/objects_query.iml" />
+    </modules>
+  </component>
+</project>

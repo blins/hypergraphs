@@ -1,26 +1,8 @@
 #encoding: UTF-8
 
-DEFAULT_CHILD_TYPE = 1
 DEFAULT_NODE_TYPE = 1
 DEFAULT_EDGE_TYPE = 1
 
-class DictL2Iterator():
-    """
-    Итератор работает с двухуровневым словарем. На втором уровне могут быть как
-    словарь так и другое итерируемое
-    """
-
-    def __init__(self, data):
-        self.data = data
-
-    def __iter__(self):
-        for l1 in self.data.values():
-            if isinstance(l1, (dict)):
-                i = l1.values()
-            else:
-                i = iter(l1)
-            for l2 in i:
-                yield l2
 
 class DumpedDictMixin():
     """
@@ -44,94 +26,93 @@ class DumpedDictMixin():
             del res[nd]
         return res
 
-class GraphChild(DumpedDictMixin):
+class DictL2Iterator():
     """
-    Base class of Node and Edge.
-    Functionality: cross-linked
+    Итератор работает с двухуровневым словарем. На втором уровне могут быть как 
+    словарь так и другое итерируемое
     """
 
-    def __init__(self, graph, func_register_name, func_unregister_name, link_name, _id=None, type=DEFAULT_CHILD_TYPE, *args, **kwargs):
-        super().__init__()
-        self._graph = graph
-        self.id = _id if _id else id(self)
-        self.type = type
-        f = getattr(graph, func_register_name)
-        f(self)
-        self._func_unregister = getattr(graph, func_unregister_name)
-        self._links = dict()  # dict of sets
-        __childs = list(kwargs.pop(link_name, []))
-        self.linkto(*__childs)
-        self.update(**kwargs)
+    def __init__(self, data):
+        self.data = data
 
-    def __getstate__(self):
-        return self.dump_dict()
+    def __iter__(self):
+        for l1 in self.data.values():
+            if isinstance(l1, (dict)):
+                i = l1.values()
+            else:
+                i = iter(l1)
+            for l2 in i:
+                yield l2
 
-    def __setstate__(self, state):
-        self.update(**state)
-
-    def update(self, **kwargs):
-        for p in kwargs:
-            setattr(self, p, kwargs[p])
-
-    def __contains__(self, item):
-        return not getattr(self, item, None) is None
-
-    def unregister_self(self):
-        for oi in self._links:
-            for o in self._links[oi]:
-                o._unlink(self)
-        self._func_unregister(self)
-
-    def _linkto(self, child):
-        type = child.type
-        if not type in self._links:
-            self._links[type] = set()
-        self._links[type].add(child)
-
-    def _unlink(self, child):
-        type = child.type
-        if type in self._links:
-            self._links[type].remove(child)
-
-    def linkto(self, *args):
-        for child in args:
-            self._linkto(child)
-            child._linkto(self)
-
-    def childs(self, type=None):
-        if type is None:
-            return self.iter_childs()
-        elif type in self._links:
-            return iter(self._links[type])
-        return set()
-
-    def iter_childs(self):
-        return DictL2Iterator(self._links)
-
-class Node(GraphChild):
+class Node(DumpedDictMixin):
     """
     Класс узла графа. Может наследоваться
     Node(graph, _id = None, type = DEFAULT_NODE_TYPE)
     _id, если не задано, то автоматически генерируется функцией id()
     type - любое значение типов str или int
     """
-    def __init__(self, graph, _id=None, type=DEFAULT_NODE_TYPE, *args, **kwargs):
-        super().__init__(graph, 'register_node', 'unregister_node', 'edges', _id, type, *args, **kwargs)
+    
+    def __init__(self, graph, _id = None, type = DEFAULT_NODE_TYPE, *args, **kwargs):
+        super().__init__()
+        self._graph = graph
+        self.id = _id if _id else id(self)
+        self.type = type
+        self._graph.register_node(self)
+        self._edges = dict() #dict of sets
+        self.linkto(*kwargs.pop('edges', []))
+        self.update(**kwargs)
+        
+    def update(self, **kwargs):
+        for p in kwargs:
+            setattr(self, p, kwargs[p])
 
-    def edges(self, type=None):
+    def __contains__(self, item):
+        return not getattr(self, item, None) is None
+        
+    def unregister_self(self):
+        for oi in self._edges:
+            for o in self._edges[oi]:
+                o._unlink(self)
+        self._graph.unregister_node(self)
+
+    def _linkto(self, edge):
+        type = edge.type
+        if not type in self._edges:
+            self._edges[type] =  set()
+        self._edges[type].add(edge)
+        
+    def _unlink(self, edge):
+        type = edge.type
+        if type in self._edges:
+            self._edges[type].remove(edge)
+
+    def linkto(self, *args):
+        """
+        Слинковать с ребрами графа (можно указывать сразу несколько). Функция вызвается единожды либо в Node,
+        либо в объекте Edge, дополнительно вызывать не надо.
+        """
+        for edge in args:
+            self._linkto(edge)
+            edge._linkto(self)
+        
+    def edges(self, type = None):
         """
         Возвращает итератор множества ребер типа type или всех, если type не указан
         """
-        return self.childs(type)
-
+        if type is None:
+            return self.iter_edges()
+        elif type in self._edges:
+            return iter(self._edges[type])
+        return set()
+    
     def iter_edges(self):
         """
         Итератор по ВСЕМ ребрам узла
         """
-        return self.iter_childs()
+        return DictL2Iterator(self._edges)
+    
 
-
-class Edge(GraphChild):
+class Edge(DumpedDictMixin):
     """
     Класс ребра графа. Может наследоваться
     Edge(graph, _id = None, type = DEFAULT_EDGE_TYPE)
@@ -140,19 +121,64 @@ class Edge(GraphChild):
     """
 
     def __init__(self, graph, _id = None, type = DEFAULT_EDGE_TYPE, *args, **kwargs):
-        super().__init__(graph, 'register_edge', 'unregister_edge', 'nodes', _id, type, *args, **kwargs)
+        super().__init__()
+        self.id = _id if _id else id(self)
+        self.type = type
+        self._graph = graph
+        self._graph.register_edge(self)
+        self._nodes = dict() #dict of sets
+        self.linkto(*kwargs.pop('nodes', []))
+        self.update(**kwargs)
+        
+    def update(self, **kwargs):
+        for p in kwargs:
+            setattr(self, p, kwargs[p])
+        
+    def unregister_self(self):
+        for oi in self._nodes:
+            for o in self._nodes[oi]:
+                o._unlink(self)
+        self._graph.unregister_edge(self)
+        
+    def __contains__(self, item):
+        return not getattr(self, item, None) is None
+        
+    def _linkto(self, node):
+        type = node.type
+        if not type in self._nodes:
+            self._nodes[type] =  set()
+        self._nodes[type].add(node)
 
+    def _unlink(self, node):
+        type = node.type
+        if type in self._nodes:
+            self._nodes[type].remove(node)
+
+    def linkto(self, *args):
+        """
+        Слинковать с узлами графа (можно указывать сразу несколько). 
+        Функция вызвается единожды либо в Node,
+        либо в объекте Edge, дополнительно вызывать не надо.
+        """
+        for node in args:
+            self._linkto(node)
+            node._linkto(self)
+        
     def nodes(self, type = None):
         """
         Возвращает итератор узлов графа типа type или всех узлов, если type = None
         """
-        return self.childs(type)
+        if type is None:
+            return self.iter_nodes()
+        elif type in self._nodes:
+            return iter(self._nodes[type])
+        return set()
     
     def iter_nodes(self):
         """
         Итератор по ВСЕМ узлам ребра
         """
-        return self.iter_childs()
+        return DictL2Iterator(self._nodes)
 
     def dump_dict(self):
         """
@@ -160,17 +186,12 @@ class Edge(GraphChild):
         Наследован из DumpedDictMixin
         """
         res  = super().dump_dict()
-        res['nodes'] = dict([(t, [n.dump_dict() for n in self._links[t]]) for t in self._links])
+        res['nodes'] = dict([(t, [n.dump_dict() for n in self._nodes[t]]) for t in self._nodes])
         return res
 
-    def __getstate__(self):
-        d = super().__getstate__()
-        d['nodes'] = [(n.type, n.id) for n in self.nodes()]
-        return d
-
-class Graph(DumpedDictMixin):
+class Graph():
     """
-    Класс гиперграфа
+    Класс многомерного графа
     Graph(class_node = Node, class_edge = Edge)
 
     TODO: pickling
@@ -308,31 +329,7 @@ class Graph(DumpedDictMixin):
     
     def edge_types(self):
         return self._edges.keys()
-
-    def __getstate__(self):
-        d = self.dump_dict()
-        d['nodes'] = [n.__getstate__() for n in self.iter_nodes()]
-        d['edges'] = [e.__getstate__() for e in self.iter_edges()]
-        return d
-
-    def __setstate__(self, state):
-        ss_nodes = state.pop('nodes')
-        ss_edges = state.pop('edges')
-        self.__dict__.update(state)
-        self.__init__(self.class_node, self.class_edge)
-        #create nodes
-        for n in ss_nodes:
-            nt = n.pop('type')
-            nid = n.pop('id')
-            self.node(nid, nt, **n)
-        #create edges
-        for e in ss_edges:
-            et = e.pop('type')
-            eid = e.pop('id')
-            en = e.pop('nodes')
-            nd = dict(en)
-            n = list(self.nodes(**nd))
-            self.class_edge(self, eid, et, nodes = n, **e)
+    
 
 if __name__ == "__main__":
     
@@ -355,8 +352,8 @@ if __name__ == "__main__":
     for ed in data:
         n_ids, p = g.separate_keys(ed)
         et = p.pop('source')
-        n = list(g.nodes(**n_ids))
-        _e = set(g.edges(*n, type = et))
+        n = g.nodes(**n_ids)
+        _e = g.edges(*n, type = et)
         if not _e:
             _e = {Edge(g, type = et, nodes = n, **p)}
         else:
@@ -367,22 +364,7 @@ if __name__ == "__main__":
 
     for _e in g._edges:
         for __e in g._edges[_e]:
+            print('t3' in __e)
             print(__e.dump_dict())
-
-    print(g.__getstate__())
-
-    import pickle
-
-    dump = pickle.dumps(g)
-
-    print('-' * 60)
-
-    ng = pickle.loads(dump)
-
-    print(ng.__getstate__())
     
-    for _e in ng._edges:
-        for __e in ng._edges[_e]:
-            print(__e.dump_dict())
-
 
