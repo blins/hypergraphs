@@ -99,9 +99,12 @@ class GraphDB():
     class_edge = GraphDBEdge
     class_node = GraphDBNode
     
-    def __init__(self, indexes = []):
-        self.graph = Graph(class_edge = self.class_edge, class_node = self.class_node)
-        self.graph.add_node_types(*indexes)
+    def __init__(self, indexes = [], graph = None):
+        if graph:
+            self.graph = graph
+        else:
+            self.graph = Graph(class_edge = self.class_edge, class_node = self.class_node)
+            self.graph.add_node_types(*indexes)
         self.nodes = NodeQuerySet(self.graph.iter_nodes())
         
     def _get_edges(self, table, data):

@@ -172,8 +172,6 @@ class Graph(DumpedDictMixin):
     """
     Класс гиперграфа
     Graph(class_node = Node, class_edge = Edge)
-
-    TODO: pickling
     """
     
     def __init__(self, class_node = Node, class_edge = Edge):

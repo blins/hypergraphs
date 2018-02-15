@@ -14,6 +14,6 @@ setup(
         'objects_query==1.0'
         ],
     description = 'Hypergraphs and DB using hypergraphs',
-    long_description = str(open('README.md', 'r').read()),
+    long_description = 'Library of hypergraph and DB using hypergraphs',
     license = "BSD",
 )
