@@ -1,0 +1,13 @@
+stntax:regexp
+\.orig$
+\.orig\..*$
+\.chg\..*$
+\.rej$
+\.conflict\~$
+\.pyc$
+/migrations/*
+\.egg-info/.*
+^build/.*
+^dist/.*
+^\.idea/.*
+
