@@ -12,7 +12,7 @@ class nFilterObjects(FilterObjects):
     def _cmp(self, v1, v2):
         return v1 or v2
 
-    def func_has(self, v1, v2):
+    def func_any(self, v1, v2):
         return True
 
 
