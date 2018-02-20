@@ -18,9 +18,11 @@
 try:
     from .graph import Graph, Edge, Node, DEFAULT_NODE_TYPE
     from .queryset import NodeQuerySet
+    from .mixins import TimeIntervalMixin
 except:
     from graph import Graph, Edge, Node, DEFAULT_NODE_TYPE
     from queryset import NodeQuerySet
+    from mixins import TimeIntervalMixin
 
 
 ################## utility #################################
@@ -53,7 +55,7 @@ class GraphDBNode(Node):
         super().__init__(graph, _id, type, *args, **kwargs)
         setattr(self, str(type), _id)
 
-class GraphDBEdge(Edge):
+class GraphDBEdge(Edge, TimeIntervalMixin):
     """
     Class provide time marks:
     t1 - begin of event
@@ -61,22 +63,6 @@ class GraphDBEdge(Edge):
     other fields this
     uniqe meta for event and stored in Nodes
     """
-    
-    @property
-    def t1(self):
-        return getattr(self, '_t1', None)
-    
-    @t1.setter
-    def t1(self, value):
-        if not hasattr(self, '_t1'):
-            self._t1 = value
-            self.t2 = value
-        elif self._t1 > value:
-            self._t1 = value
-        elif self.t2 < value:
-                self.t2 = value
-        else:
-            self.t2 = value
     
     def dump_dict(self):
         res = super().dump_dict()
@@ -87,7 +73,7 @@ class GraphDBEdge(Edge):
                 res[n] = [o['id'] for o in ns[n]]
             else:
                 res[n] = ns[n][0]['id']
-        if hasattr(self, '_t1'):
+        if hasattr(self, 't1'):
             res['t1'] = self.t1
         return res
     
